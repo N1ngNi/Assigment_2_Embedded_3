@@ -54,7 +54,7 @@ void errors()
 }
 
 char *currentColors = "\x1b[37m";
-char *currentBackgroundColors;
+char *currentBackgroundColors = "\x1b[40m";
 void setBackgroundColor(char *backgroundColors)
 {
     if (cus_strcmp(backgroundColors, "red") == 0)
@@ -169,7 +169,7 @@ void cli()
         if (cus_strcmp(token, "help") == 0)
         {
             char *secondToken = cus_strtok("\0", " ");
-            if (secondToken != '\0')
+            if (secondToken != 0)
             {
 
                 if (cus_strcmp(secondToken, "help") == 0)
@@ -246,7 +246,7 @@ void cli()
             uart_puts("\e[1;1H\e[2J");
         }
 
-        else
+        else if (cus_strcmp(token, "clear") != 0 && cus_strcmp(token, "setcolor") == 0 && cus_strcmp(token, "help") == 0)
         {
             errors();
         }
