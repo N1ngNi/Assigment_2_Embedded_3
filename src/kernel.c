@@ -128,6 +128,8 @@ void setColor(char *colors)
         uart_puts("Invalid colors! Please use red, green, yellow, blue, purple, cyan, or white.\n");
     }
 }
+
+
 void cli()
 {
     static char cli_buffer[MAX_CMD_SIZE];
