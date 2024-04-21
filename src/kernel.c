@@ -217,10 +217,6 @@ void cli()
                     char *backgroundColors = cus_strtok("\0", " "); // Extract color name
                     setBackgroundColor(backgroundColors);
                 }
-                else
-                {
-                    errors();
-                }
             }
 
             else if (cus_strcmp(secondToken, "-b") == 0)
@@ -233,12 +229,8 @@ void cli()
                     char *colors = cus_strtok("\0", " "); // Extract color name
                     setColor(colors);
                 }
-                else
-                {
-                    errors();
-                }
             }
-            else
+            else if ((cus_strcmp(secondToken, "-t") != 0) && (cus_strcmp(secondToken, "-b") != 0))
             {
                 errors();
             }
@@ -264,10 +256,14 @@ void cli()
                 uart_puts("Unable to query!\n");
             }
         }
-        else if (cus_strcmp(token, "clear") != 0 && cus_strcmp(token, "setcolor") == 0 && cus_strcmp(token, "help") == 0)
+        else if (cus_strcmp(token, "clear") != 0 && cus_strcmp(token, "setcolor") != 0 && cus_strcmp(token, "help") != 0 && cus_strcmp(token, "showinfo") != 0)
         {
             errors();
         }
+        // else
+        // {
+        //     errors();
+        // }
         uart_puts(currentColors);
         uart_puts(currentBackgroundColors);
         uart_puts("\n--------------------------------------------------");
