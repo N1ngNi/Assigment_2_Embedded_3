@@ -8,6 +8,7 @@
 
 #build folder
 **/build/*.o
+**/build/*.elf
 
 #vscode folder
 **/.vscode
