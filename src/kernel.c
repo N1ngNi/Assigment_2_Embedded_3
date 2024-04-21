@@ -1,5 +1,5 @@
 // -----------------------------------main.c -------------------------------------
-#include "uart.h"
+#include "uart0.h"
 
 #define MAX_CMD_SIZE 100
 
@@ -169,7 +169,7 @@ void cli()
         if (cus_strcmp(token, "help") == 0)
         {
             char *secondToken = cus_strtok("\0", " ");
-            if (secondToken != 0)
+            if (secondToken != '\0')
             {
 
                 if (cus_strcmp(secondToken, "help") == 0)
