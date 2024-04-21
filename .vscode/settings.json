@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "string": "c",
-        "string.h": "c",
-        "uart0.h": "c",
-        "cstdint": "c",
-        "cstdlib": "c"
-    }
-}
