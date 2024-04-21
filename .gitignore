@@ -7,7 +7,7 @@
 *.exe
 
 #build folder
-**/build
+**/build/*.o
 
 #vscode folder
 **/.vscode
