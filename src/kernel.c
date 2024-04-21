@@ -1,5 +1,6 @@
 // -----------------------------------main.c -------------------------------------
 #include "uart.h"
+#include "mbox.h"
 
 #define MAX_CMD_SIZE 100
 
@@ -163,6 +164,7 @@ void cli()
         uart_puts("\nGot commands: ");
         uart_puts(cli_buffer);
         uart_puts("\n");
+        uart_puts("\n--------------------------------------------------");
         /* Compare with supported commands and execute
          * ........................................... */
         // HELP FUNCTION
@@ -200,7 +202,7 @@ void cli()
                 uart_puts("\nshowinfo");
             }
         }
-
+        // SETCOLOR FUNCTION
         if (cus_strcmp(token, "setcolor") == 0)
         {
             char *secondToken = cus_strtok("\0", " ");
@@ -245,13 +247,29 @@ void cli()
         {
             uart_puts("\e[1;1H\e[2J");
         }
-
+        // SHOWINFO FUNCTION
+        else if (cus_strcmp(token, "showinfo") == 0)
+        {
+            // Note: Board model and Board serial may give 0 values on QEMU.
+            if (mbox_call(ADDR(mBuf), MBOX_CH_PROP))
+            {
+                uart_puts("\nBoard Revision: ");
+                uart_hex(mBuf[5]);
+                uart_puts("\nBoard MAC Address: ");
+                uart_hex(mBuf[9]);
+            }
+            else
+            {
+                uart_puts("Unable to query!\n");
+            }
+        }
         else if (cus_strcmp(token, "clear") != 0 && cus_strcmp(token, "setcolor") == 0 && cus_strcmp(token, "help") == 0)
         {
             errors();
         }
         uart_puts(currentColors);
         uart_puts(currentBackgroundColors);
+        uart_puts("\n--------------------------------------------------");
         uart_puts("\nNingOS:> ");
         index = 0;
     }
