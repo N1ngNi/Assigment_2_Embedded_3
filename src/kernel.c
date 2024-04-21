@@ -129,7 +129,6 @@ void setColor(char *colors)
     }
 }
 
-
 void cli()
 {
     static char cli_buffer[MAX_CMD_SIZE];
@@ -302,7 +301,8 @@ int main()
               "|____/_/    \\_\\_|  \\_\\______|     \\____/|_____/ \n"
               "\n"
               "Developed by Tran Thanh Tu - S3957386\n");
-    uart_puts("NingOS:> ");
+    uart_puts("\n--------------------------------------------------");
+    uart_puts("\nNingOS:> ");
 
     // echo everything back
     while (1)
