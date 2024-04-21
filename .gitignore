@@ -1,0 +1,10 @@
+
+#kernel file
+*.img
+
+#trash file
+*.doc
+*.exe
+
+#build folder
+*/build
