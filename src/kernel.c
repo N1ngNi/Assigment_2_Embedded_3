@@ -3,7 +3,8 @@
 #include "mbox.h"
 
 #define MAX_CMD_SIZE 100
-
+#define COMMANDS_SIZE 4
+char *commands[] = {"help", "clear", "setcolor", "showinfo"};
 //-------------------------------------Some Custom function------------------------------------------------------
 int cus_strcmp(const char *s1, const char *s2) // just a string copy : D
 {
@@ -13,6 +14,16 @@ int cus_strcmp(const char *s1, const char *s2) // just a string copy : D
         ++s2;
     }
     return *s1 - *s2;
+}
+
+int cus_strlen(const char *str)
+{
+    int length = 0;
+    while (str[length] != '\0')
+    {
+        length++;
+    }
+    return length;
 }
 
 char *cus_strtok(char *str, const char *delim)
@@ -47,6 +58,15 @@ char *cus_strtok(char *str, const char *delim)
     return start;
 }
 
+void cus_strcpy(char *dest, const char *src)
+{
+    while (*src)
+    {
+        *dest++ = *src++;
+    }
+    *dest = '\0';
+}
+
 //------------------main function-----------------------------------------------------
 void errors()
 {
@@ -58,7 +78,11 @@ char *currentColors = "\x1b[37m";
 char *currentBackgroundColors = "\x1b[40m";
 void setBackgroundColor(char *backgroundColors)
 {
-    if (cus_strcmp(backgroundColors, "red") == 0)
+    if (cus_strcmp(backgroundColors, "black") == 0)
+    {
+        currentBackgroundColors = "\x1b[40m"; // 41 is red
+    }
+    else if (cus_strcmp(backgroundColors, "red") == 0)
     {
         currentBackgroundColors = "\x1b[41m"; // 41 is red
     }
@@ -94,9 +118,12 @@ void setBackgroundColor(char *backgroundColors)
 
 void setColor(char *colors)
 {
+    if (cus_strcmp(colors, "black") == 0)
+    {
+        currentColors = "\x1b[30m"; //
+    }
     if (cus_strcmp(colors, "red") == 0)
     {
-
         currentColors = "\x1b[31m";
     }
     else if (cus_strcmp(colors, "green") == 0)
@@ -129,16 +156,68 @@ void setColor(char *colors)
     }
 }
 
+char *tabHandler(char *cli_buffer)
+{
+
+    int i, x;
+    int numCompletions = 0;
+    int lastMatchingIndex = -1;
+    int partialLength = cus_strlen(cli_buffer);
+
+    for (i = 0; i < COMMANDS_SIZE; ++i)
+    {
+        int commandLength = 0;
+        while (commands[i][commandLength] != '\0' && cli_buffer[commandLength] != '\0' && commands[i][commandLength] == cli_buffer[commandLength])
+        {
+            ++commandLength;
+        }
+        if (cli_buffer[commandLength] == '\0')
+        {
+            numCompletions++;
+            lastMatchingIndex = i;
+        }
+    }
+
+    if (numCompletions == 1)
+    {
+        return commands[lastMatchingIndex];
+    }
+    else if (numCompletions > 1) // more than 1 matches
+    {
+        for (i = 0; i < COMMANDS_SIZE; i++)
+        {
+            for (x = 0; x < cus_strlen(commands[i]) && x < partialLength; x++)
+            {
+                if (commands[i][x] != cli_buffer[x])
+                {
+                    break;
+                }
+            }
+            if (x == partialLength)
+            {
+                uart_puts(commands[i]);
+                uart_puts(" ");
+            }
+        }
+        uart_puts("\n");
+    }
+    // Return an empty string if no completion or multiple completions
+    cli_buffer[0] = '\0';
+    return "";
+}
+
 void cli()
 {
+
     static char cli_buffer[MAX_CMD_SIZE];
     static int index = 0;
+    static char *token;
     // read and send back each char
     char c = uart_getc();
     uart_sendc(c);
 
     // put into a buffer until got new line or get backspace character
-    if (c != '\n' && c != '\b')
+    if (c != '\n' && c != '\b' && c != '\t')
     {
         cli_buffer[index] = c; // Store into the buffer
         index++;
@@ -158,10 +237,44 @@ void cli()
         cli_buffer[index] = '\0';
     }
 
+    if (c == '\t') // currently working on
+    {
+
+        if (index < 7) // try to delete all of the space when tabbing
+        {
+            for (int i = 0; i < 7 - index; i++)
+            {
+                uart_puts("\b \b"); // move back input space and move back
+            }
+        }
+        if (index >= 7) // if more than 7 index it will use the function below to delete
+        {
+            for (int i = 0; i <= 7 - (index - 7); i++)
+            {
+                uart_puts("\b \b");
+            }
+        }
+        char *completedCommand = tabHandler(cli_buffer);
+        if (*completedCommand != '\0')
+        {
+            for (int i = 0; i < index; i++) // loops to delete out all output onscreen in order to replace it with completed command
+            {
+                uart_puts("\b \b");
+            }
+            uart_puts(completedCommand);
+            cli_buffer[0] = '\0';
+            index = cus_strlen(completedCommand);
+            // index = 0;
+            cus_strcpy(cli_buffer, completedCommand);
+            // cus_strcpy(token, completedCommand);
+        }
+    }
+
     else if (c == '\n')
     {
         cli_buffer[index] = '\0';
-        char *token = cus_strtok(cli_buffer, " ");
+        // char *token = cus_strtok(cli_buffer, " ");
+        token = cus_strtok(cli_buffer, " ");
         uart_puts("\nGot commands: ");
         uart_puts(cli_buffer);
         uart_puts("\n");
@@ -268,6 +381,11 @@ void cli()
         uart_puts(currentBackgroundColors);
         uart_puts("\n--------------------------------------------------");
         uart_puts("\nNingOS:> ");
+        for (int i = index; i >= 0; i--)
+        {
+            cli_buffer[i] = '\0';
+        }
+
         index = 0;
     }
 }
