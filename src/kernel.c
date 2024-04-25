@@ -237,7 +237,7 @@ void cli()
         cli_buffer[index] = '\0';
     }
 
-    if (c == '\t') // currently working on
+    if (c == '\t') // Working perfectly
     {
 
         if (index < 7) // try to delete all of the space when tabbing
@@ -272,13 +272,14 @@ void cli()
 
     else if (c == '\n')
     {
-        cli_buffer[index] = '\0';
-        // char *token = cus_strtok(cli_buffer, " ");
-        token = cus_strtok(cli_buffer, " ");
         uart_puts("\nGot commands: ");
         uart_puts(cli_buffer);
         uart_puts("\n");
         uart_puts("\n--------------------------------------------------");
+        cli_buffer[index] = '\0';
+        // char *token = cus_strtok(cli_buffer, " ");
+        token = cus_strtok(cli_buffer, " ");
+
         /* Compare with supported commands and execute
          * ........................................... */
         // HELP FUNCTION
@@ -305,6 +306,10 @@ void cli()
                 else if (cus_strcmp(secondToken, "showinfo") == 0)
                 {
                     uart_puts("\nshowinfo                  - Show board revision and board MAC address in correct format/ meaningful information");
+                }
+                else
+                {
+                    errors();
                 }
             }
 
