@@ -5,6 +5,9 @@
 #define MAX_CMD_SIZE 100
 #define COMMANDS_SIZE 4
 char *commands[] = {"help", "clear", "setcolor", "showinfo"};
+char *history[100][100];
+static int historyList = 0;
+static int currentHistoryList = 0;
 //-------------------------------------Some Custom function------------------------------------------------------
 int cus_strcmp(const char *s1, const char *s2) // just a string copy : D
 {
@@ -212,13 +215,18 @@ void cli()
     static char cli_buffer[MAX_CMD_SIZE];
     static int index = 0;
     static char *token;
+
     // read and send back each char
     char c = uart_getc();
-    uart_sendc(c);
-
-    // put into a buffer until got new line or get backspace character
-    if (c != '\n' && c != '\b' && c != '\t')
+    // uart_dec(c);
+    if (c != '\b' && c != 45 && c != 61)
     {
+        uart_sendc(c);
+    }
+    // put into a buffer until got new line or get backspace character
+    if (c != '\n' && c != '\b' && c != '\t' && c != 45 && c != 61)
+    {
+
         cli_buffer[index] = c; // Store into the buffer
         index++;
     }
@@ -229,10 +237,10 @@ void cli()
 
         if (index <= 0)
         {
-            uart_puts(" ");
+            // uart_puts(" ");
             return;
         }
-        uart_puts(" \b");
+        uart_puts("\b \b");
         index--;
         cli_buffer[index] = '\0';
     }
@@ -270,10 +278,39 @@ void cli()
         }
     }
 
+    if (c == 45) // Escape sequence for arrow keys
+    {
+        for (int i = 0; i < index; i++)
+        {
+            uart_puts("\b \b");
+        }
+        cus_strcpy(cli_buffer, history[currentHistoryList]);
+        index = cus_strlen(cli_buffer);
+        uart_puts(history[currentHistoryList]);
+        currentHistoryList++;
+    }
+    if (c == 61)
+    {
+        currentHistoryList--;
+        if (currentHistoryList < 0)
+        {
+            return;
+        }
+        for (int i = 0; i < index; i++)
+        {
+            uart_puts("\b \b");
+        }
+        cus_strcpy(cli_buffer, history[currentHistoryList]);
+        index = cus_strlen(cli_buffer);
+        uart_puts(history[currentHistoryList]);
+    }
     else if (c == '\n')
     {
         uart_puts("\nGot commands: ");
         uart_puts(cli_buffer);
+        cus_strcpy(history[historyList], cli_buffer);
+        currentHistoryList = 0;
+        historyList++;
         uart_puts("\n");
         uart_puts("\n--------------------------------------------------");
         cli_buffer[index] = '\0';
@@ -427,7 +464,6 @@ int main()
     while (1)
     {
         // read each char
-
         cli();
     }
 }
