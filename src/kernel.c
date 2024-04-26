@@ -280,6 +280,11 @@ void cli()
 
     if (c == 45) // Escape sequence for arrow keys
     {
+        if (currentHistoryList <= 0)
+        {
+            return;
+        }
+        currentHistoryList--;
         for (int i = 0; i < index; i++)
         {
             uart_puts("\b \b");
@@ -287,15 +292,15 @@ void cli()
         cus_strcpy(cli_buffer, history[currentHistoryList]);
         index = cus_strlen(cli_buffer);
         uart_puts(history[currentHistoryList]);
-        currentHistoryList++;
     }
     if (c == 61)
     {
-        currentHistoryList--;
-        if (currentHistoryList < 0)
+
+        if (currentHistoryList > historyList)
         {
             return;
         }
+        currentHistoryList++;
         for (int i = 0; i < index; i++)
         {
             uart_puts("\b \b");
@@ -309,8 +314,9 @@ void cli()
         uart_puts("\nGot commands: ");
         uart_puts(cli_buffer);
         cus_strcpy(history[historyList], cli_buffer);
-        currentHistoryList = 0;
+
         historyList++;
+        currentHistoryList = historyList;
         uart_puts("\n");
         uart_puts("\n--------------------------------------------------");
         cli_buffer[index] = '\0';
