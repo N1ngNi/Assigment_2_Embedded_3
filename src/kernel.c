@@ -78,7 +78,7 @@ void errors()
 }
 
 char *currentColors = "\x1b[37m";
-char *currentBackgroundColors = "\x1b[40m";
+char *currentBackgroundColors = "";
 void setBackgroundColor(char *backgroundColors)
 {
     if (cus_strcmp(backgroundColors, "black") == 0)
