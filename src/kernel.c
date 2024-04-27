@@ -159,6 +159,29 @@ void setColor(char *colors)
     }
 }
 
+void printBoardRevision(const unsigned int *mac)
+{
+    if (mac = 0x00A02082)
+    {
+        uart_puts("rpi-3B BCM2837 1GiB Sony UK");
+    }
+    else if (mac = 0x00900092)
+    {
+        uart_puts("rpi-Zero BCM2835 512MB Sony UK");
+    }
+    else if (mac = 0x00000010)
+    {
+        uart_puts("rpi-1B+ BCM2835");
+    }
+    else if (mac = 0x00a01041)
+    {
+        uart_puts("rpi-2B BCM2836 1GiB Sony UK");
+    }
+    else
+    {
+        uart_puts("rpi-4B BCM2711 2GiB Sony UK");
+    }
+}
 char *tabHandler(char *cli_buffer)
 {
 
@@ -405,12 +428,47 @@ void cli()
         else if (cus_strcmp(token, "showinfo") == 0)
         {
             // Note: Board model and Board serial may give 0 values on QEMU.
+            mBuf[0] = 30 * 4;       // Message Buffer Size in bytes
+            mBuf[1] = MBOX_REQUEST; // Message Request Code
+
+            mBuf[2] = 0x00030002; // TAG Identifier: Get clock rate (ARM clock)
+            mBuf[3] = 8;          // Value buffer size in bytes
+            mBuf[4] = 0;          // REQUEST CODE = 0
+            mBuf[5] = 3;          // clock id: ARM system clock
+            mBuf[6] = 0;          // clear output buffer (response data are mBuf[5] & mBuf[6])
+
+            mBuf[7] = 0x00000001; // TAG Identifier: Get firmware revision
+            mBuf[8] = 4;          // Value buffer size in bytes
+            mBuf[9] = 0;          // REQUEST CODE = 0
+            mBuf[10] = 0;         // clear output buffer (response data are mBuf[10])
+
+            mBuf[11] = 0x00030002; // TAG Identifier: Get clock rate (UART clock)
+            mBuf[12] = 8;          // Value buffer size in bytes
+            mBuf[13] = 0;          // REQUEST CODE = 0
+            mBuf[14] = 2;          // clock id: UART clock
+            mBuf[15] = 0;          // clear output buffer (response data are mBuf[14] & mBuf[15])
+
+            mBuf[16] = 0x00010002; // TAG Identifier: Get board revision
+            mBuf[17] = 4;          // Value buffer size in bytes
+            mBuf[18] = 0;          // REQUEST CODE = 0
+            mBuf[19] = 0;          // clear output buffer (response data are mBuf[19])
+
+            mBuf[20] = 0x00010003; // TAG Identifier: Get board MAC address
+            mBuf[21] = 6 * 2;      // Value buffer size in bytes
+            mBuf[22] = 0;          // REQUEST CODE = 0
+            mBuf[23] = 0;          // clear output buffer (response data are mBuf[23])
+
+            mBuf[24] = MBOX_TAG_LAST;
+
             if (mbox_call(ADDR(mBuf), MBOX_CH_PROP))
             {
-                uart_puts("\nBoard Revision: ");
-                uart_hex(mBuf[5]);
-                uart_puts("\nBoard MAC Address: ");
-                uart_hex(mBuf[9]);
+                uart_puts("\nDATA: board revision = ");
+                printBoardRevision(&mBuf[19]);
+
+                uart_puts("\n+ Response Code in Message TAG (Board MAC address): ");
+                uart_hex(mBuf[22]);
+                uart_puts("\nDATA: board MAC address = ");
+                printBoardRevision((unsigned char *)&mBuf[23]);
             }
             else
             {
