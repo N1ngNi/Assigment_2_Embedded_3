@@ -9,7 +9,7 @@ char *history[100][100];
 static int historyList = 0;
 static int currentHistoryList = 0;
 //-------------------------------------Some Custom function------------------------------------------------------
-int cus_strcmp(const char *s1, const char *s2) // just a string copy : D
+int cus_strcmp(const char *s1, const char *s2)
 {
     while (*s1 && *s2 && *s1 == *s2)
     {
@@ -242,12 +242,12 @@ void cli()
     // read and send back each char
     char c = uart_getc();
     // uart_dec(c);
-    if (c != '\b' && c != 45 && c != 61)
+    if (c != '\b' && c != 95 && c != 43)
     {
         uart_sendc(c);
     }
     // put into a buffer until got new line or get backspace character
-    if (c != '\n' && c != '\b' && c != '\t' && c != 45 && c != 61)
+    if (c != '\n' && c != '\b' && c != '\t' && c != 95 && c != 43)
     {
 
         cli_buffer[index] = c; // Store into the buffer
@@ -301,7 +301,7 @@ void cli()
         }
     }
 
-    if (c == 45) // Escape sequence for arrow keys
+    if (c == 95)
     {
         if (currentHistoryList <= 0)
         {
@@ -316,7 +316,7 @@ void cli()
         index = cus_strlen(cli_buffer);
         uart_puts(history[currentHistoryList]);
     }
-    if (c == 61)
+    if (c == 43)
     {
 
         if (currentHistoryList > historyList)
