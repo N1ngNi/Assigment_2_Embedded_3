@@ -8,8 +8,8 @@ char *commands[] = {"help", "clear", "setcolor", "showinfo"};
 char *history[100][100];
 static int historyList = 0;
 static int currentHistoryList = 0;
-static int doubleMatch = 0;
-static int doubleLock = 0;
+static int identicalMatchNum = 0;
+static int identicalLock = 0;
 //-------------------------------------Some Custom function------------------------------------------------------
 int cus_strcmp(const char *s1, const char *s2)
 {
@@ -189,7 +189,7 @@ char *tabHandler(char *cli_buffer, int currentMatch)
     int numCompletions = 0;
     int lastMatchingIndex = -1;
     int partialLength = cus_strlen(cli_buffer);
-    char *doubleMatch[] = {"setcolor", "showinfo"};
+    char *identicalCommands[] = {"setcolor", "showinfo"};
     for (i = 0; i < COMMANDS_SIZE; ++i)
     {
         int commandLength = 0;
@@ -205,14 +205,14 @@ char *tabHandler(char *cli_buffer, int currentMatch)
         }
     }
 
-    if (numCompletions == 1 && doubleLock == 0)
+    if (numCompletions == 1 && identicalLock == 0)
     {
         return commands[lastMatchingIndex];
     }
     else if (numCompletions > 1) // more than 1 matches
     {
-        doubleLock = 1;
-        return doubleMatch[currentMatch];
+        identicalLock = 1;
+        return identicalCommands[currentMatch];
     }
     // Return an empty string if no completion or multiple completions
     cli_buffer[0] = '\0';
@@ -235,7 +235,6 @@ void cli()
     // put into a buffer until got new line or get backspace character
     if (c != '\n' && c != '\b' && c != '\t' && c != 95 && c != 43)
     {
-
         cli_buffer[index] = c; // Store into the buffer
         index++;
     }
@@ -243,20 +242,19 @@ void cli()
     // if user typein backspace it will delete the output and shift the index --
     if (c == '\b')
     {
-        doubleLock = 0;
-        if (index <= 0)
+        identicalLock = 0;
+        if (index > 0)
         {
-            // uart_puts(" ");
-            return;
+            uart_puts("\b \b");
+            index--;
+            cli_buffer[index] = '\0';
         }
-        uart_puts("\b \b");
-        index--;
-        cli_buffer[index] = '\0';
     }
 
     if (c == '\t') // Working perfectly
     {
-        doubleMatch = doubleMatch ^ 1;
+
+        identicalMatchNum = identicalMatchNum ^ 1;
 
         if (index < 7) // try to delete all of the space when tabbing
         {
@@ -272,14 +270,14 @@ void cli()
                 uart_puts("\b \b");
             }
         }
-        if (doubleLock == 1)
+        if (identicalLock == 1)
         {
             for (int i = 1; i < index; i++)
             {
                 cli_buffer[i] = '\0';
             }
         }
-        char *completedCommand = tabHandler(cli_buffer, doubleMatch);
+        char *completedCommand = tabHandler(cli_buffer, identicalMatchNum);
         if (*completedCommand != '\0')
         {
             for (int i = 0; i < index; i++) // loops to delete out all output onscreen in order to replace it with completed command
@@ -306,11 +304,10 @@ void cli()
         }
         cus_strcpy(cli_buffer, history[currentHistoryList]);
         index = cus_strlen(cli_buffer);
-        uart_puts(history[currentHistoryList]);
+        uart_puts(cli_buffer);
     }
     if (c == 43)
     {
-
         if (currentHistoryList > historyList)
         {
             return;
@@ -322,17 +319,18 @@ void cli()
         }
         cus_strcpy(cli_buffer, history[currentHistoryList]);
         index = cus_strlen(cli_buffer);
-        uart_puts(history[currentHistoryList]);
+        uart_puts(cli_buffer);
     }
     else if (c == '\n')
     {
-        doubleLock = 0;
+        identicalLock = 0;
         uart_puts("\nGot commands: ");
         uart_puts(cli_buffer);
-        cus_strcpy(history[historyList], cli_buffer);
 
+        cus_strcpy(history[historyList], cli_buffer);
         historyList++;
         currentHistoryList = historyList;
+
         uart_puts("\n");
         uart_puts("\n--------------------------------------------------");
         cli_buffer[index] = '\0';
@@ -471,10 +469,7 @@ void cli()
         {
             errors();
         }
-        // else
-        // {
-        //     errors();
-        // }
+
         uart_puts(currentColors);
         uart_puts(currentBackgroundColors);
         uart_puts("\n--------------------------------------------------");
