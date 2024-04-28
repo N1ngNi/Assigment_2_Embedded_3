@@ -7,15 +7,24 @@
 ### WORK LOAD
 
 #### Welcome Message and Command Line Interpreter (CLI) : 100%
+
 #### OS name (e.g. MyOS) : 100%
-#### Auto-completion : 80%
+
+#### Auto-completion : 100%
+
 #### Command history : 100%
+
 #### Help : 100%
+
 #### clear : 100%
+
 #### setcolor : 100%
+
 #### showinfo : 60%
+
 #### Task 2 : 0%
-#### Report : 0%
+
+#### Report : 50%
 
 ### REFERENCES
 
