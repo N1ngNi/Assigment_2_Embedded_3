@@ -8,6 +8,8 @@ char *commands[] = {"help", "clear", "setcolor", "showinfo"};
 char *history[100][100];
 static int historyList = 0;
 static int currentHistoryList = 0;
+static int doubleMatch = 0;
+static int doubleLock = 0;
 //-------------------------------------Some Custom function------------------------------------------------------
 int cus_strcmp(const char *s1, const char *s2)
 {
@@ -18,7 +20,6 @@ int cus_strcmp(const char *s1, const char *s2)
     }
     return *s1 - *s2;
 }
-
 int cus_strlen(const char *str)
 {
     int length = 0;
@@ -182,17 +183,17 @@ void printBoardRevision(const unsigned int *mac)
         uart_puts("rpi-4B BCM2711 2GiB Sony UK");
     }
 }
-char *tabHandler(char *cli_buffer)
+char *tabHandler(char *cli_buffer, int currentMatch)
 {
-
     int i, x;
     int numCompletions = 0;
     int lastMatchingIndex = -1;
     int partialLength = cus_strlen(cli_buffer);
-
+    char *doubleMatch[] = {"setcolor", "showinfo"};
     for (i = 0; i < COMMANDS_SIZE; ++i)
     {
         int commandLength = 0;
+
         while (commands[i][commandLength] != '\0' && cli_buffer[commandLength] != '\0' && commands[i][commandLength] == cli_buffer[commandLength])
         {
             ++commandLength;
@@ -204,28 +205,14 @@ char *tabHandler(char *cli_buffer)
         }
     }
 
-    if (numCompletions == 1)
+    if (numCompletions == 1 && doubleLock == 0)
     {
         return commands[lastMatchingIndex];
     }
-    else if (numCompletions > 1) // more than 1 matches
+    else if (numCompletions > 1 || doubleLock == 1) // more than 1 matches
     {
-        for (i = 0; i < COMMANDS_SIZE; i++)
-        {
-            for (x = 0; x < cus_strlen(commands[i]) && x < partialLength; x++)
-            {
-                if (commands[i][x] != cli_buffer[x])
-                {
-                    break;
-                }
-            }
-            if (x == partialLength)
-            {
-                uart_puts(commands[i]);
-                uart_puts(" ");
-            }
-        }
-        uart_puts("\n");
+        doubleLock = 1;
+        return doubleMatch[currentMatch];
     }
     // Return an empty string if no completion or multiple completions
     cli_buffer[0] = '\0';
@@ -241,7 +228,6 @@ void cli()
 
     // read and send back each char
     char c = uart_getc();
-    // uart_dec(c);
     if (c != '\b' && c != 95 && c != 43)
     {
         uart_sendc(c);
@@ -257,7 +243,7 @@ void cli()
     // if user typein backspace it will delete the output and shift the index --
     if (c == '\b')
     {
-
+        doubleLock = 0;
         if (index <= 0)
         {
             // uart_puts(" ");
@@ -270,6 +256,7 @@ void cli()
 
     if (c == '\t') // Working perfectly
     {
+        doubleMatch = doubleMatch ^ 1;
 
         if (index < 7) // try to delete all of the space when tabbing
         {
@@ -285,7 +272,14 @@ void cli()
                 uart_puts("\b \b");
             }
         }
-        char *completedCommand = tabHandler(cli_buffer);
+        if (doubleLock == 1)
+        {
+            for (int i = 1; i < index; i++)
+            {
+                cli_buffer[i] = '\0';
+            }
+        }
+        char *completedCommand = tabHandler(cli_buffer, doubleMatch);
         if (*completedCommand != '\0')
         {
             for (int i = 0; i < index; i++) // loops to delete out all output onscreen in order to replace it with completed command
@@ -332,6 +326,7 @@ void cli()
     }
     else if (c == '\n')
     {
+        doubleLock = 0;
         uart_puts("\nGot commands: ");
         uart_puts(cli_buffer);
         cus_strcpy(history[historyList], cli_buffer);
@@ -341,7 +336,6 @@ void cli()
         uart_puts("\n");
         uart_puts("\n--------------------------------------------------");
         cli_buffer[index] = '\0';
-        // char *token = cus_strtok(cli_buffer, " ");
         token = cus_strtok(cli_buffer, " ");
 
         /* Compare with supported commands and execute
