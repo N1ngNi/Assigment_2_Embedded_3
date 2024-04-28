@@ -197,11 +197,11 @@ char *tabHandler(char *cli_buffer, int currentMatch)
         while (commands[i][commandLength] != '\0' && cli_buffer[commandLength] != '\0' && commands[i][commandLength] == cli_buffer[commandLength])
         {
             ++commandLength;
-        }
-        if (cli_buffer[commandLength] == '\0')
-        {
-            numCompletions++;
-            lastMatchingIndex = i;
+            if (cli_buffer[commandLength] == '\0')
+            {
+                numCompletions++;
+                lastMatchingIndex = i;
+            }
         }
     }
 
@@ -209,7 +209,7 @@ char *tabHandler(char *cli_buffer, int currentMatch)
     {
         return commands[lastMatchingIndex];
     }
-    else if (numCompletions > 1 || doubleLock == 1) // more than 1 matches
+    else if (numCompletions > 1) // more than 1 matches
     {
         doubleLock = 1;
         return doubleMatch[currentMatch];
