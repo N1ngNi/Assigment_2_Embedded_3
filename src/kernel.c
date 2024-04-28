@@ -295,9 +295,7 @@ void cli()
             uart_puts(completedCommand);
             cli_buffer[0] = '\0';
             index = cus_strlen(completedCommand);
-            // index = 0;
             cus_strcpy(cli_buffer, completedCommand);
-            // cus_strcpy(token, completedCommand);
         }
     }
 
