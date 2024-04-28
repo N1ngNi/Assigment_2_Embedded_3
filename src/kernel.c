@@ -197,11 +197,11 @@ char *tabHandler(char *cli_buffer, int currentMatch)
         while (commands[i][commandLength] != '\0' && cli_buffer[commandLength] != '\0' && commands[i][commandLength] == cli_buffer[commandLength])
         {
             ++commandLength;
-            if (cli_buffer[commandLength] == '\0')
-            {
-                numCompletions++;
-                lastMatchingIndex = i;
-            }
+        }
+        if (cli_buffer[commandLength] == '\0')
+        {
+            numCompletions++;
+            lastMatchingIndex = i;
         }
     }
 
@@ -209,7 +209,7 @@ char *tabHandler(char *cli_buffer, int currentMatch)
     {
         return commands[lastMatchingIndex];
     }
-    else if (numCompletions > 1) // more than 1 matches
+    else if (numCompletions > 1 || doubleLock == 1) // more than 1 matches
     {
         doubleLock = 1;
         return doubleMatch[currentMatch];
@@ -246,6 +246,7 @@ void cli()
         doubleLock = 0;
         if (index <= 0)
         {
+            // uart_puts(" ");
             return;
         }
         uart_puts("\b \b");
@@ -256,20 +257,23 @@ void cli()
     if (c == '\t') // Working perfectly
     {
         doubleMatch = doubleMatch ^ 1;
-        int x = 0;
 
-        if (index >= 7) // if more than 7 index x will = to 7
+        if (index < 7) // try to delete all of the space when tabbing
         {
-            x = 7;
+            for (int i = 0; i < 7 - index; i++)
+            {
+                uart_puts("\b \b"); // move back input space and move back
+            }
         }
-        for (int i = 0; i < 7 - (index - x); i++)
+        if (index >= 7) // if more than 7 index it will use the function below to delete
         {
-            uart_puts("\b \b"); // move back input space and move back
+            for (int i = 0; i <= 7 - (index - 7); i++)
+            {
+                uart_puts("\b \b");
+            }
         }
-
         if (doubleLock == 1)
         {
-            uart_puts("\b \b");
             for (int i = 1; i < index; i++)
             {
                 cli_buffer[i] = '\0';
@@ -467,6 +471,10 @@ void cli()
         {
             errors();
         }
+        // else
+        // {
+        //     errors();
+        // }
         uart_puts(currentColors);
         uart_puts(currentBackgroundColors);
         uart_puts("\n--------------------------------------------------");
