@@ -646,6 +646,7 @@ cli()
             static char parityBuffer[5]; // Increase buffer size to 2
             static int parityIndex = 0;
             static char parityChar;
+            int parityInput = 0;
             do
             {
                 parityChar = uart_getc();
@@ -669,7 +670,7 @@ cli()
             uart_puts("\nparity set to: ");
             uart_puts(parityBuffer); // print the choice
             // turn string choice into integer choice
-            int parityInput = 0;
+
             if (cus_strcmp(parityBuffer, "none") == 0)
             {
                 parityInput = 1;
@@ -683,10 +684,10 @@ cli()
                 parityInput = 3; // even
             }
             // put integer choice into the actual configure function
-            uart_puts("\nLCRH before the parity configuration: ");
+            uart_puts("\nLCRH before parity configuration: ");
             uart_hex(UART0_LCRH);
             configureParity(parityInput);
-            uart_puts("\nLCRH after the parity configuration: ");
+            uart_puts("\nLCRH after parity configuration: ");
             uart_hex(UART0_LCRH);
             uart_puts("\n");
             for (int i = 0; i < 2; i++)
