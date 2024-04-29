@@ -155,3 +155,10 @@ char uart_getc();
 void uart_puts(char *s);
 void uart_hex(unsigned int d);
 void uart_dec(int num);
+/*Problem 2 function declaration*/
+float power(float base, int exponent);
+void configureBaudrate(int baudrates);
+void configureDatabits(int input);
+void configureStopbits(int input);
+void configureParity(int input);
+void configureHandshaking(int input);

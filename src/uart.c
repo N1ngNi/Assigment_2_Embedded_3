@@ -1,4 +1,6 @@
 #include "uart.h"
+int IBRD = 26;
+int FBRD = 3;
 
 /**
  * Set baud rate and characteristics and map to GPIO
@@ -54,8 +56,8 @@ void uart_init()
 	Fraction part register UART0_FBRD = (Fractional part * 64) + 0.5 */
 
 	// 115200 baud
-	UART0_IBRD = 26;
-	UART0_FBRD = 3;
+	UART0_IBRD = IBRD;
+	UART0_FBRD = FBRD;
 
 	/* Set up the Line Control Register */
 	/* Enable FIFO */
@@ -160,4 +162,117 @@ void uart_dec(int num)
 	}
 	str[len] = '\0';
 	uart_puts(str);
+}
+//-------Question 2 Declaraiton-----------------
+float power(float base, int exponent)
+{
+	float result = 1;
+	for (int i = 0; i < exponent; i++)
+	{
+		result *= base;
+	}
+	return result;
+}
+
+void configureBaudrate(int baudrates)
+{
+	do
+	{
+		asm volatile("nop");
+	} while (UART0_FR & UART0_FR_BUSY); // wait for transmission complete
+
+	UART0_CR = 0x0; // disable the UART
+	float BAUDDIVs = (48 * (power(10, 6))) / (16 * baudrates);
+	UART0_IBRD = (int)BAUDDIVs;
+	UART0_FBRD = (BAUDDIVs - UART0_IBRD) * 64 + 0.5;
+	UART0_CR |= 0x301; // enable UART0, Tx, Rx, FIFO
+}
+
+void configureDatabits(int input)
+{
+	do
+	{
+		asm volatile("nop");
+	} while (UART0_FR & UART0_FR_BUSY); // wait for transmission complete to change baudrate or LCRH
+	UART0_CR = 0x0;						// disable Tx, Rx, UART0
+	// clear
+	UART0_LCRH &= ~(0b111 << 4); // clear 3 bit from bit 4
+	UART0_LCRH = 0x0;
+	// switch case to set
+	switch (input)
+	{
+	case 5:
+		UART0_LCRH = UART0_LCRH_FEN | UART0_LCRH_WLEN_5BIT;
+		break;
+	case 6:
+		UART0_LCRH = UART0_LCRH_FEN | UART0_LCRH_WLEN_6BIT;
+		break;
+	case 7:
+		UART0_LCRH = UART0_LCRH_FEN | UART0_LCRH_WLEN_7BIT;
+		break;
+	case 8:
+		UART0_LCRH = UART0_LCRH_FEN | UART0_LCRH_WLEN_8BIT;
+		break;
+	default:
+		uart_puts("\nWarning: You entered a number other than 5, 6, 7, or 8.");
+	}
+
+	/* Enable UART0, receive, and transmit */
+	UART0_CR |= 0x301; // enable Tx, Rx, FIFO
+}
+
+void configureStopbits(int input)
+{
+	do
+	{
+		asm volatile("nop");
+	} while (UART0_FR & UART0_FR_BUSY); // wait for transmission complete to change baudrate or LCRH
+	UART0_CR = 0x0;						// disable UART0
+	// clear
+	UART0_LCRH &= ~UART0_LCRH_STP2;
+	// switch case to set
+	if (input == 2)
+	{
+		UART0_LCRH |= UART0_LCRH_STP2; // set bit 3 to 1 which is STP2
+	}
+
+	/* Enable UART0, receive, and transmit */
+	UART0_CR |= 0x301; // enable Tx, Rx, FIFO
+}
+
+void configureParity(int input)
+{
+	do
+	{
+		asm volatile("nop");
+	} while (UART0_FR & UART0_FR_BUSY); // wait for transmission complete to change baudrate or LCRH
+	UART0_CR = 0x0;						// disable UART0
+	// clear
+	UART0_LCRH &= ~(UART0_LCRH_EPS | UART0_LCRH_PEN);
+	// switch case to set
+	if (input == 2)
+	{
+		UART0_LCRH |= UART0_LCRH_PEN; // odd: PEN = 1, EPS = 0
+	}
+	else if (input == 3)
+	{
+		UART0_LCRH |= UART0_LCRH_EPS | UART0_LCRH_PEN; // even: PEN = 1, EPS = 1
+	}
+	/* Enable UART0, receive, and transmit */
+	UART0_CR |= 0x301; // enable Tx, Rx, FIFO
+}
+
+void configureHandshaking(int input)
+{
+	do
+	{
+		asm volatile("nop");
+	} while (UART0_FR & UART0_FR_BUSY);
+	UART0_CR = 0x0;							// disable UART0
+	UART0_CR = UART0_CR_TXE | UART0_CR_RXE; // enable transmission and reception
+	if (input == 1)
+	{
+		UART0_CR |= UART0_CR_CTSEN | UART0_CR_RTSEN;
+	}
+	UART0_CR |= UART0_CR_UARTEN; // enable uart
 }
