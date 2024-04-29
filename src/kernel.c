@@ -103,6 +103,16 @@ void errors()
     uart_puts("\nInvalid Commands");
     uart_puts("\n");
 }
+int delete(int index)
+{
+
+    if (index > 0)
+    {
+        uart_puts("\b \b");
+        index--;
+    }
+    return (index);
+}
 
 char *currentColors = "\x1b[37m";
 char *currentBackgroundColors = "";
@@ -257,7 +267,7 @@ char *tabHandler(char *cli_buffer, int currentMatch)
     return "";
 }
 
-void cli()
+cli()
 {
 
     static char cli_buffer[MAX_CMD_SIZE];
@@ -506,23 +516,31 @@ void cli()
 
         else if (cus_strcmp(token, "baudrate") == 0)
         {
+
             uart_puts("\nEnter baudrate: ");
             static char baudrateBuffer[10];
             static int baudrateIndex = 0;
             static char baudrateChar;
+
             do
             {
                 baudrateChar = uart_getc();
-                uart_sendc(baudrateChar); // echo the character
-                if (baudrateChar != '\n' && baudrateChar != '\r')
+                // echo the character
+
+                if (baudrateChar != '\n' && baudrateChar != '\r' && baudrateChar != '\b')
                 {
+                    uart_sendc(baudrateChar);
                     baudrateBuffer[baudrateIndex] = baudrateChar;
                     baudrateIndex++;
+                }
+                if (baudrateChar == '\b')
+                {
+                    baudrateIndex = delete (baudrateIndex);
                 }
             } while (baudrateChar != '\n' && baudrateChar != '\r' && baudrateIndex < sizeof(baudrateBuffer) - 1);
             baudrateBuffer[baudrateIndex] = '\0';        // null-terminate the string
             int baudrate = cus_parseint(baudrateBuffer); // convert string to integer
-            uart_puts("--------------------------------------------------");
+            uart_puts("\n--------------------------------------------------");
 
             uart_puts("\nIRBD before baudrate configuration: ");
             uart_hex(UART0_IBRD); // print the IBRD (it should be UART0_IBRD)
@@ -631,11 +649,15 @@ void cli()
             do
             {
                 parityChar = uart_getc();
-                if (parityChar != '\n' && parityChar != '\r')
+                if (parityChar != '\n' && parityChar != '\r' && parityChar != '\b')
                 {
                     uart_sendc(parityChar); // echo the character
                     parityBuffer[parityIndex] = parityChar;
                     parityIndex++;
+                }
+                if (parityChar == '\b')
+                {
+                    parityIndex = delete (parityIndex);
                 }
             } while (parityChar != '\n' && parityChar != '\r' && parityIndex < sizeof(parityBuffer) - 1);
             parityBuffer[parityIndex] = '\0'; // null-terminate the string
@@ -682,11 +704,16 @@ void cli()
             do
             {
                 hsChar = uart_getc();
-                if (hsChar != '\n' && hsChar != '\r')
+                if (hsChar != '\n' && hsChar != '\r' && hsChar != '\b')
                 {
                     uart_sendc(hsChar); // echo the character
                     hsBuffer[hsIndex] = hsChar;
                     hsIndex++;
+                }
+                if (hsChar == '\b')
+                {
+                    hsIndex = delete (hsIndex);
+                    hsBuffer[hsIndex] = '\0';
                 }
             } while (hsChar != '\n' && hsChar != '\r' && hsIndex < sizeof(hsBuffer) - 1);
             hsBuffer[hsIndex] = '\0'; // null-terminate the string
@@ -734,6 +761,7 @@ void cli()
 
         index = 0;
     }
+    return cli_buffer[index];
 }
 
 //------------------------------------------------------main--------------------------------------
@@ -743,8 +771,8 @@ int main()
 
     uart_init();
     // say hello
-
-    uart_puts(" ______ ______ ______ _______ ___  _  _    ___   ___ \n"
+    uart_puts("\e[1;1H\e[2J");
+    uart_puts("\n ______ ______ ______ _______ ___  _  _    ___   ___ \n"
               "|  ____|  ____|  ____|__   __|__ \\| || |  / _ \\ / _ \\ \n"
               "| |__  | |__  | |__     | |     ) | || |_| | | | (_) | \n"
               "|  __| |  __| |  __|    | |    / /|__   _| | | |\\__, | \n"
