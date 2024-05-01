@@ -149,7 +149,8 @@
 #define UART0_TDR (*(volatile unsigned int *)(UART0_BASE + 0x8C))
 
 /* Function prototypes */
-void uart_init();
+void uart_init(int baud, int data, int stop, int parity, int handshaking);
+
 void uart_sendc(char c);
 char uart_getc();
 void uart_puts(char *s);

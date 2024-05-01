@@ -10,6 +10,11 @@ static int historyList = 0;
 static int currentHistoryList = 0;
 static int identicalMatchNum = 0;
 static int identicalLock = 0;
+int currentBaud = 115200;
+int currentData = 8;
+int currentStop = 1;
+int currentParity = 1;
+int currentHS = 0;
 //-------------------------------------Some Custom function------------------------------------------------------
 int cus_strcmp(const char *s1, const char *s2)
 {
@@ -231,6 +236,46 @@ void printMacAddress(const unsigned char *mac)
         }
     }
 }
+void uartShowSetting()
+{
+    // BAUD RATE
+    uart_puts("Baudrates: ");
+    uart_dec(currentBaud);
+    uart_puts("\n");
+
+    // DATA BIT
+    uart_puts("Databits: ");
+    uart_dec(currentData);
+    uart_puts("\n");
+    // STOP BIT
+    uart_puts("Stopbits: ");
+    uart_dec(currentStop);
+    uart_puts("\n");
+
+    // PARITY BIT
+
+    if (currentParity == 1)
+    {
+        uart_puts("Parity bit : none \n");
+    }
+    else if (currentParity == 2)
+    {
+        uart_puts("Parity bit : odd \n");
+    }
+    else if (currentParity == 3)
+    {
+        uart_puts("Parity bit : even \n");
+    }
+    // HANDSHAKING
+    if (currentHS == 0)
+    {
+        uart_puts("handshaking : None \n");
+    }
+    else if (currentHS == 1)
+    {
+        uart_puts("Handshaking : RTS/CTS \n");
+    }
+}
 char *tabHandler(char *cli_buffer, int currentMatch)
 {
     int i, x;
@@ -400,7 +445,7 @@ cli()
                 }
                 else if (cus_strcmp(secondToken, "clear") == 0)
                 {
-                    uart_puts("\nclear                     - Clear screen (in our terminal it will scroll down to currentposition of the cursor).");
+                    uart_puts("\nclear                     - Clear screen.");
                 }
                 else if (cus_strcmp(secondToken, "setcolor") == 0)
                 {
@@ -409,7 +454,7 @@ cli()
                 }
                 else if (cus_strcmp(secondToken, "showinfo") == 0)
                 {
-                    uart_puts("\nshowinfo                  - Show board revision and board MAC address in correct format/ meaningful information");
+                    uart_puts("\nshowinfo                  - Show board revision and board MAC address");
                 }
                 else
                 {
@@ -466,47 +511,28 @@ cli()
         else if (cus_strcmp(token, "showinfo") == 0)
         {
             // Note: Board model and Board serial may give 0 values on QEMU.
-            mBuf[0] = 30 * 4;       // Message Buffer Size in bytes
-            mBuf[1] = MBOX_REQUEST; // Message Request Code
-
-            mBuf[2] = 0x00030002; // TAG Identifier: Get clock rate (ARM clock)
-            mBuf[3] = 8;          // Value buffer size in bytes
+            mBuf[0] = 12 * 4;
+            mBuf[1] = MBOX_REQUEST;
+            // get board revision
+            mBuf[2] = 0x00010002; // TAG Identifier: Get board revision
+            mBuf[3] = 4;          // Value buffer size in bytes
             mBuf[4] = 0;          // REQUEST CODE = 0
-            mBuf[5] = 3;          // clock id: ARM system clock
-            mBuf[6] = 0;          // clear output buffer (response data are mBuf[5] & mBuf[6])
+            mBuf[5] = 0;          // Clear output buffer
 
-            mBuf[7] = 0x00000001; // TAG Identifier: Get firmware revision
-            mBuf[8] = 4;          // Value buffer size in bytes
-            mBuf[9] = 0;          // REQUEST CODE = 0
-            mBuf[10] = 0;         // clear output buffer (response data are mBuf[10])
-
-            mBuf[11] = 0x00030002; // TAG Identifier: Get clock rate (UART clock)
-            mBuf[12] = 8;          // Value buffer size in bytes
-            mBuf[13] = 0;          // REQUEST CODE = 0
-            mBuf[14] = 2;          // clock id: UART clock
-            mBuf[15] = 0;          // clear output buffer (response data are mBuf[14] & mBuf[15])
-
-            mBuf[16] = 0x00010002; // TAG Identifier: Get board revision
-            mBuf[17] = 4;          // Value buffer size in bytes
-            mBuf[18] = 0;          // REQUEST CODE = 0
-            mBuf[19] = 0;          // clear output buffer (response data are mBuf[19])
-
-            mBuf[20] = 0x00010003; // TAG Identifier: Get board MAC address
-            mBuf[21] = 6 * 2;      // Value buffer size in bytes
-            mBuf[22] = 0;          // REQUEST CODE = 0
-            mBuf[23] = 0;          // clear output buffer (response data are mBuf[23])
-
-            mBuf[24] = MBOX_TAG_LAST;
+            mBuf[6] = 0x00010003; // TAG Identifier: MAC address
+            mBuf[7] = 6;          // Value buffer size in bytes
+            mBuf[8] = 0;          // REQUEST CODE = 0
+            mBuf[9] = 0;          // Clear output buffer
+            mBuf[11] = MBOX_TAG_LAST;
 
             if (mbox_call(ADDR(mBuf), MBOX_CH_PROP))
             {
-                uart_puts("\nDATA: board revision = ");
-                printBoardRevision(&mBuf[19]);
-
-                uart_puts("\n+ Response Code in Message TAG (Board MAC address): ");
-                uart_hex(mBuf[22]);
-                uart_puts("\nDATA: board MAC address = ");
-                printMacAddress((unsigned char *)&mBuf[23]);
+                uart_puts("\nBoard Revision: ");
+                printBoardRevision(mBuf[5]);
+                uart_puts("\nBoard MAC Address: ");
+                printMacAddress((unsigned char *)&mBuf[9]);
+                uart_puts("\n");
+                uartShowSetting();
             }
             else
             {
@@ -540,20 +566,9 @@ cli()
             } while (baudrateChar != '\n' && baudrateChar != '\r' && baudrateIndex < sizeof(baudrateBuffer) - 1);
             baudrateBuffer[baudrateIndex] = '\0';        // null-terminate the string
             int baudrate = cus_parseint(baudrateBuffer); // convert string to integer
-            uart_puts("\n--------------------------------------------------");
 
-            uart_puts("\nIRBD before baudrate configuration: ");
-            uart_hex(UART0_IBRD); // print the IBRD (it should be UART0_IBRD)
-            uart_puts("\nFBRD before baudrate configuration: ");
-            uart_hex(UART0_FBRD); // print the FBRD
-
-            configureBaudrate(baudrate);
-            uart_puts("\nIBRD after baudrate configuration: ");
-            uart_hex(UART0_IBRD); // print the IBRD (it should be UART0_IBRD)
-            uart_puts("\nFBRD after baudrate configuration: ");
-            uart_hex(UART0_FBRD); // print the FBRD
-            uart_puts("\n--------------------------------------------------\n");
-
+            uart_init(baudrate, currentData, currentStop, currentParity, currentHS);
+            currentBaud = baudrate;
             for (int i = 0; i < 10; i++)
             { // reset buffer
                 baudrateBuffer[i] = 0;
@@ -563,8 +578,8 @@ cli()
 
         else if (cus_strcmp(token, "databit") == 0)
         {
-            uart_puts("\nEnter data bit (5,6,7,8): ");
-            static char databitBuffer[2]; // Increase buffer size to 2
+            uart_puts("\nEnter data bit (5 | 6 | 7 | 8): ");
+            static char databitBuffer[2];
             static int databitIndex = 0;
             static char databitChar;
             do
@@ -572,37 +587,32 @@ cli()
                 databitChar = uart_getc();
                 if (databitChar != '\n' && databitChar != '\r')
                 {
-                    uart_sendc(databitChar); // echo the character
+                    uart_sendc(databitChar);
                     databitBuffer[databitIndex] = databitChar;
                     databitIndex++;
                 }
             } while (databitChar != '\n' && databitChar != '\r' && databitIndex < sizeof(databitBuffer) - 1);
-            databitBuffer[databitIndex] = '\0';        // null-terminate the string
-            int databit = cus_parseint(databitBuffer); // convert string to integer
+            databitBuffer[databitIndex] = '\0';
+            int databit = cus_parseint(databitBuffer);
             if (databit != 5 && databit != 6 && databit != 7 && databit != 8)
             {
-                uart_puts("\n\u274CWarning: You entered a number other than 5, 6, 7, or 8.\n");
+                uart_puts("\nWarning! Invalid Input.\n");
             }
             else
             {
-                uart_puts("\nLCRH before data bit configuration: ");
-                uart_hex(UART0_LCRH);
-                configureDatabits(databit);
-                uart_puts("\nLCRH after data bit configuration: ");
-                uart_hex(UART0_LCRH); // print the hex of FEN + WLEN in LCRH register
-                uart_puts("\n");
-                uart_puts("--------------------------------------------------\n");
+                uart_init(currentBaud, databit, currentStop, currentParity, currentHS);
+                currentData = databit;
             }
             for (int i = 0; i < 2; i++)
-            { // reset buffer
+            {
                 databitBuffer[i] = 0;
             }
             databitIndex = 0;
         }
         else if (cus_strcmp(token, "stopbit") == 0)
         {
-            uart_puts("\nEnter stop bit (1,2): ");
-            static char stopbitBuffer[2]; // Increase buffer size to 2
+            uart_puts("\nEnter stop bit (1 | 2): ");
+            static char stopbitBuffer[2];
             static int stopbitIndex = 0;
             static char stopbitChar;
             do
@@ -610,39 +620,32 @@ cli()
                 stopbitChar = uart_getc();
                 if (stopbitChar != '\n' && stopbitChar != '\r')
                 {
-                    uart_sendc(stopbitChar); // echo the character
+                    uart_sendc(stopbitChar);
                     stopbitBuffer[stopbitIndex] = stopbitChar;
                     stopbitIndex++;
                 }
             } while (stopbitChar != '\n' && stopbitChar != '\r' && stopbitIndex < sizeof(stopbitBuffer) - 1);
-            stopbitBuffer[stopbitIndex] = '\0';        // null-terminate the string
-            int stopbit = cus_parseint(stopbitBuffer); // convert string to integer
-            uart_puts("\n--------------------------------------------------");
+            stopbitBuffer[stopbitIndex] = '\0';
+            int stopbit = cus_parseint(stopbitBuffer);
 
-            // int IBRD, FBRD; ,&IBRD,&FBRD
             if (stopbit != 1 && stopbit != 2)
             {
-                uart_puts("\n\u274CWarning: You entered a number other than 1 or 0.\n");
+                uart_puts("\nWarning! Invalid Input.\n");
             }
             else
             {
-                uart_puts("\nLCRH before stop bit configuration: ");
-                uart_hex(UART0_LCRH);
-                configureStopbits(stopbit);
-                uart_puts("\nLCRH after stop bit configuration: ");
-                uart_hex(UART0_LCRH); // print the hex of FEN + WLEN in LCRH register
-                uart_puts("\n");
-                uart_puts("--------------------------------------------------\n");
+                uart_init(currentBaud, currentData, stopbit, currentParity, currentHS);
+                currentStop = stopbit;
             }
             for (int i = 0; i < 2; i++)
-            { // reset buffer
+            {
                 stopbitBuffer[i] = 0;
             }
             stopbitIndex = 0;
         }
         else if (cus_strcmp(token, "parity") == 0)
         {
-            uart_puts("\nEnter parity choice (none, even, odd): ");
+            uart_puts("\nEnter parity choice (none | even | odd): ");
             static char parityBuffer[5]; // Increase buffer size to 2
             static int parityIndex = 0;
             static char parityChar;
@@ -661,15 +664,11 @@ cli()
                     parityIndex = delete (parityIndex);
                 }
             } while (parityChar != '\n' && parityChar != '\r' && parityIndex < sizeof(parityBuffer) - 1);
-            parityBuffer[parityIndex] = '\0'; // null-terminate the string
+            parityBuffer[parityIndex] = '\0';
             if (cus_strcmp(parityBuffer, "none") != 0 && cus_strcmp(parityBuffer, "odd") != 0 && cus_strcmp(parityBuffer, "even") != 0)
             {
-                uart_puts("\n\u274CWarning: You entered a string other than 'none', 'yes', or 'no'.\n");
+                uart_puts("\nWarning! Invalid Input.\n");
             }
-            uart_puts("\n--------------------------------------------------");
-            uart_puts("\nparity set to: ");
-            uart_puts(parityBuffer); // print the choice
-            // turn string choice into integer choice
 
             if (cus_strcmp(parityBuffer, "none") == 0)
             {
@@ -683,23 +682,19 @@ cli()
             {
                 parityInput = 3; // even
             }
-            // put integer choice into the actual configure function
-            uart_puts("\nLCRH before parity configuration: ");
-            uart_hex(UART0_LCRH);
-            configureParity(parityInput);
-            uart_puts("\nLCRH after parity configuration: ");
-            uart_hex(UART0_LCRH);
-            uart_puts("\n");
+
+            uart_init(currentBaud, currentData, currentStop, parityInput, currentHS);
+            currentParity = parityInput;
             for (int i = 0; i < 2; i++)
-            { // reset buffer
+            {
                 parityBuffer[i] = 0;
             }
             parityIndex = 0;
         }
         else if (cus_strcmp(token, "handshaking") == 0)
         {
-            uart_puts("\nEnter handshaking choice (none, enable): ");
-            static char hsBuffer[7]; // Increase buffer size to 2
+            uart_puts("\nEnter handshaking choice (on | off): ");
+            static char hsBuffer[3];
             static int hsIndex = 0;
             static char hsChar;
             do
@@ -718,16 +713,13 @@ cli()
                 }
             } while (hsChar != '\n' && hsChar != '\r' && hsIndex < sizeof(hsBuffer) - 1);
             hsBuffer[hsIndex] = '\0'; // null-terminate the string
-            if (cus_strcmp(hsBuffer, "none") != 0 && cus_strcmp(hsBuffer, "enable") != 0)
+            if (cus_strcmp(hsBuffer, "off") != 0 && cus_strcmp(hsBuffer, "on") != 0)
             {
-                uart_puts("\n\u274CWarning: You entered a string other than 'none', 'enable'.\n");
+                uart_puts("\nWarning! Invalid Input.\n");
             }
-            uart_puts("\n--------------------------------------------------");
-            uart_puts("\nHandshaking mode: ");
-            uart_puts(hsBuffer); // print the choice
-            // turn string choice into integer choice
+
             int hsInput = 0;
-            if (cus_strcmp(hsBuffer, "enable") == 0)
+            if (cus_strcmp(hsBuffer, "on") == 0)
             {
                 hsInput = 1;
             }
@@ -735,13 +727,10 @@ cli()
             {
                 hsInput = 0; // none
             }
-            // put integer choice into the actual configure function
-            configureHandshaking(hsInput);
-            uart_puts("\nCR after handshaking configuration: ");
-            uart_hex(UART0_CR);
-            uart_puts("\n");
+            uart_init(currentBaud, currentData, currentStop, currentParity, hsInput);
+            currentHS = hsInput;
             for (int i = 0; i < 7; i++)
-            { // reset buffer
+            {
                 hsBuffer[i] = 0;
             }
             hsIndex = 0;
@@ -770,7 +759,8 @@ int main()
 {
     // intitialize UART
 
-    uart_init();
+    uart_init(currentBaud, currentData, currentStop, currentParity, currentHS);
+
     // say hello
     uart_puts("\e[1;1H\e[2J");
     uart_puts("\n ______ ______ ______ _______ ___  _  _    ___   ___ \n"
